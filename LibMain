@@ -3017,7 +3017,6 @@ function Library:CreateWindow(...)
     if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
 
-    -- 🌟 スマホ向け：画面サイズに合わせてUIのサイズを自動縮小
     if InputService.TouchEnabled then
         local vp = workspace.CurrentCamera.ViewportSize
         local maxWidth = math.min(Config.Size.X.Offset, vp.X - 20)
@@ -3223,7 +3222,6 @@ function Library:CreateWindow(...)
             Parent = TabContainer;
         });
 
-        -- 🌟 スマホ向け：高さを Scale(1) ベースに変更し、親フレームが小さくても見切れないように
         local LeftSide = Library:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
@@ -3766,7 +3764,7 @@ if InputService.TouchEnabled then
         })
         Library:AddToRegistry(Frame, {
             BackgroundColor3 = 'MainColor',
-            BorderColor3 = 'AccentColor' -- 🌟 登録することでテーマ変更時も追従する
+            BorderColor3 = 'AccentColor'
         })
 
         local Btn = Library:Create('TextButton', {
@@ -3785,37 +3783,23 @@ if InputService.TouchEnabled then
         return Frame, Btn
     end
 
-    -- 🌟 ToggleとLockをそれぞれ別のフレームとして生成
+    -- 🌟 Toggleは上、Lockはそのすぐ下（Y座標を +40）に配置
     local ToggleFrame, ToggleBtn = CreateMobileButton("Toggle", "Toggle UI", UDim2.new(0, 10, 0, 10))
-    local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 120, 0, 10))
-
-    ToggleBtn.Activated:Connect(function()
-        Library:Toggle()
-    end)
+    local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 10, 0, 50))
 
     local IsUnlocked = false
-    LockBtn.Activated:Connect(function()
-        IsUnlocked = not IsUnlocked
-        LockBtn.Text = IsUnlocked and "Lock UI" or "Unlock UI"
-        
-        -- 🌟 Unlock状態の時はテキストをアクセントカラーで光らせる
-        if IsUnlocked then
-            LockBtn.TextColor3 = Library.AccentColor
-            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'AccentColor'
-        else
-            LockBtn.TextColor3 = Library.FontColor
-            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'FontColor'
-        end
-    end)
 
-    -- 各フレームをドラッグ可能にする関数（Unlock状態のみ）
-    local function MakeMobileDraggable(Frame)
+    -- 🌟 ドラッグとタップを正確に区別して処理する関数
+    local function BindMobileButtonAction(Btn, Frame, ClickAction)
         local Dragging = false
-        local DragStart, StartPos
+        local DragStart = nil
+        local StartPos = nil
+        local HasMoved = false
 
-        Frame.InputBegan:Connect(function(input)
-            if IsUnlocked and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        Btn.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 Dragging = true
+                HasMoved = false
                 DragStart = input.Position
                 StartPos = Frame.Position
             end
@@ -3824,20 +3808,54 @@ if InputService.TouchEnabled then
         InputService.InputChanged:Connect(function(input)
             if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local Delta = input.Position - DragStart
-                Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+                
+                -- 指が5ピクセル以上動いたら「ドラッグ」として判定（タップ誤爆を防ぐ）
+                if Delta.Magnitude > 5 then
+                    HasMoved = true
+                end
+                
+                -- アンロック状態の時だけフレームを移動させる
+                if IsUnlocked then
+                    Frame.Position = UDim2.new(
+                        StartPos.X.Scale, StartPos.X.Offset + Delta.X,
+                        StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
+                    )
+                end
             end
         end)
 
         InputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                Dragging = false
+                if Dragging then
+                    Dragging = false
+                    -- 指がほとんど動いていなければ「クリック」として処理を実行
+                    if not HasMoved then
+                        ClickAction()
+                    end
+                end
             end
         end)
     end
 
-    -- 🌟 それぞれにドラッグ機能を付与
-    MakeMobileDraggable(ToggleFrame)
-    MakeMobileDraggable(LockFrame)
+    -- 🌟 Toggleボタンのクリックアクション
+    BindMobileButtonAction(ToggleBtn, ToggleFrame, function()
+        Library:Toggle()
+    end)
+
+    -- 🌟 Lockボタンのクリックアクション
+    BindMobileButtonAction(LockBtn, LockFrame, function()
+        IsUnlocked = not IsUnlocked
+        LockBtn.Text = IsUnlocked and "Lock UI" or "Unlock UI"
+        
+        -- Unlock状態の時はテキストをアクセントカラーで光らせる
+        if IsUnlocked then
+            LockBtn.TextColor3 = Library.AccentColor
+            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'AccentColor'
+        else
+            LockBtn.TextColor3 = Library.FontColor
+            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'FontColor'
+        end
+    end)
 end
 
 getgenv().Library = Library
