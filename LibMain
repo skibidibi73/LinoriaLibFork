@@ -3740,7 +3740,7 @@ Players.PlayerAdded:Connect(OnPlayerChange);
 Players.PlayerRemoving:Connect(OnPlayerChange);
 
 -- ==========================================
--- 📱 スマホ専用：モバイルUIの個別配置＆同期
+-- 📱 スマホ専用：モバイルUIの完全対応版
 -- ==========================================
 if InputService.TouchEnabled then
     local MobileGui = Instance.new("ScreenGui")
@@ -3749,12 +3749,11 @@ if InputService.TouchEnabled then
     ProtectGui(MobileGui)
     MobileGui.Parent = CoreGui
 
-    -- UIパーツ生成用関数
     local function CreateMobileButton(name, text, startPos)
         local Frame = Library:Create('Frame', {
             Name = name .. "Frame",
             BackgroundColor3 = Library.MainColor,
-            BorderColor3 = Library.AccentColor, -- 🌟 アクセントカラーに同期
+            BorderColor3 = Library.AccentColor,
             BorderMode = Enum.BorderMode.Inset,
             Position = startPos,
             Size = UDim2.new(0, 100, 0, 35),
@@ -3776,78 +3775,84 @@ if InputService.TouchEnabled then
             TextColor3 = Library.FontColor,
             TextSize = 14,
             ZIndex = 301,
-            Parent = Frame
+            Parent = Frame,
+            Active = true, -- ここ重要: ボタン自身にタッチを検知させる
         })
         Library:AddToRegistry(Btn, { TextColor3 = 'FontColor' })
 
         return Frame, Btn
     end
 
-    -- 🌟 Toggleは上、Lockはそのすぐ下（Y座標を +40）に配置
+    -- 🌟 Toggleは上、Lockはそのすぐ下（Y座標を+45）に配置
     local ToggleFrame, ToggleBtn = CreateMobileButton("Toggle", "Toggle UI", UDim2.new(0, 10, 0, 10))
-    local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 10, 0, 50))
+    local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 10, 0, 55))
 
     local IsUnlocked = false
 
-    -- 🌟 ドラッグとタップを正確に区別して処理する関数
+    -- 🌟 究極のドラッグ＆タップ判定関数
     local function BindMobileButtonAction(Btn, Frame, ClickAction)
-        local Dragging = false
-        local DragStart = nil
-        local StartPos = nil
-        local HasMoved = false
+        local dragging = false
+        local dragInput = nil
+        local dragStart = nil
+        local startPos = nil
+        local hasMoved = false
 
         Btn.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                Dragging = true
-                HasMoved = false
-                DragStart = input.Position
-                StartPos = Frame.Position
+                dragging = true
+                hasMoved = false
+                dragStart = input.Position
+                startPos = Frame.Position
+                dragInput = input -- この指の動きを追跡する
+
+                -- 指を離した時
+                local connection
+                connection = input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                        connection:Disconnect()
+                        
+                        -- 動かしてなければ「クリック」と判定
+                        if not hasMoved then
+                            ClickAction()
+                        end
+                    end
+                end)
             end
         end)
 
+        -- 指が動いた時の処理
         InputService.InputChanged:Connect(function(input)
-            if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local Delta = input.Position - DragStart
+            if input == dragInput and dragging then
+                local delta = input.Position - dragStart
                 
-                -- 指が5ピクセル以上動いたら「ドラッグ」として判定（タップ誤爆を防ぐ）
-                if Delta.Magnitude > 5 then
-                    HasMoved = true
+                -- ちょっとでも（3ピクセル以上）動いたら「ドラッグ」とみなす
+                if delta.Magnitude > 3 then
+                    hasMoved = true
                 end
                 
                 -- アンロック状態の時だけフレームを移動させる
-                if IsUnlocked then
+                if IsUnlocked and hasMoved then
                     Frame.Position = UDim2.new(
-                        StartPos.X.Scale, StartPos.X.Offset + Delta.X,
-                        StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
                     )
-                end
-            end
-        end)
-
-        InputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                if Dragging then
-                    Dragging = false
-                    -- 指がほとんど動いていなければ「クリック」として処理を実行
-                    if not HasMoved then
-                        ClickAction()
-                    end
                 end
             end
         end)
     end
 
-    -- 🌟 Toggleボタンのクリックアクション
+    -- Toggleボタンの動作
     BindMobileButtonAction(ToggleBtn, ToggleFrame, function()
         Library:Toggle()
     end)
 
-    -- 🌟 Lockボタンのクリックアクション
+    -- Lockボタンの動作
     BindMobileButtonAction(LockBtn, LockFrame, function()
         IsUnlocked = not IsUnlocked
         LockBtn.Text = IsUnlocked and "Lock UI" or "Unlock UI"
         
-        -- Unlock状態の時はテキストをアクセントカラーで光らせる
+        -- Unlock中は青く光らせる（動かせるよ！のアピール）
         if IsUnlocked then
             LockBtn.TextColor3 = Library.AccentColor
             Library.RegistryMap[LockBtn].Properties.TextColor3 = 'AccentColor'
