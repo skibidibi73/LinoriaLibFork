@@ -15,6 +15,33 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
+-- 🌟 モバイル対応：マウス位置または画面中央を取得する関数
+local function GetCenterOrMouse()
+    local cam = workspace.CurrentCamera
+    if UserInputService.TouchEnabled then
+        return Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+    else
+        return UserInputService:GetMouseLocation()
+    end
+end
+
+-- 🌟 モバイル対応：マウスのターゲットまたは画面中央のターゲットを取得する関数
+local function GetCenterTarget()
+    if UserInputService.TouchEnabled then
+        local cam = workspace.CurrentCamera
+        local ray = cam:ViewportPointToRay(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+        local params = RaycastParams.new()
+        if LocalPlayer.Character then
+            params.FilterDescendantsInstances = {LocalPlayer.Character}
+        end
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+        return result and result.Instance or nil
+    else
+        return Mouse.Target
+    end
+end
+
 local ESPFolder = Instance.new("ScreenGui")
 ESPFolder.Name = "StylishESP"
 ESPFolder.IgnoreGuiInset = true
@@ -433,7 +460,6 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 ThemeManager:ApplyTheme('Default')
 
 -- 🌟🌟🌟 タイピング＆バックスペースアニメーションシステム 🌟🌟🌟
--- 位置調整用の固定余白（スペース）を最初に入れます
 local prefix = "                " 
 local fullText = "phantom.bin - discord.gg/8h9hDgbzUV"
 local currentIndex = 0
@@ -735,7 +761,7 @@ local function checkRageTargetNear()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("Head") then return false end
     local headPos = char.Head.Position
-    local mouseLoc = UserInputService:GetMouseLocation()
+    local mouseLoc = GetCenterOrMouse()
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
@@ -1351,7 +1377,7 @@ local function getClosestPlayer()
     local currentCam = workspace.CurrentCamera
     local closestDist = Options.FOVRadius.Value 
     local target = nil
-    local mouseLoc = UserInputService:GetMouseLocation()
+    local mouseLoc = GetCenterOrMouse()
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and isValidTargetTeam(player) and player.Character then
@@ -1404,6 +1430,7 @@ task.spawn(function()
         if not char or not char:FindFirstChild("Head") then return nil, nil end
         
         local headPos = char.Head.Position
+        local mouseLoc = GetCenterOrMouse()
         
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
@@ -1433,7 +1460,6 @@ task.spawn(function()
                                 if Toggles.RageFOV and Toggles.RageFOV.Value then
                                     local screenPos, onScreen = currentCam:WorldToViewportPoint(tPart.Position)
                                     if onScreen then
-                                        local mouseLoc = UserInputService:GetMouseLocation()
                                         local mouseDist = (Vector2.new(screenPos.X, screenPos.Y) - mouseLoc).Magnitude
                                         if mouseDist > Options.RageFOVRadius.Value then
                                             isWithinFOV = false
@@ -1996,7 +2022,7 @@ local isTriggerCooldown = false
 
 RunService:BindToRenderStep("PhantomOverlay", Enum.RenderPriority.Last.Value + 200, function(deltaTime)
     local currentCam = workspace.CurrentCamera
-    local mouseLoc = UserInputService:GetMouseLocation()
+    local mouseLoc = GetCenterOrMouse()
 
     FOVRegion.Visible = Toggles.ShowFOV.Value
     FOVRegion.Radius = Options.FOVRadius.Value
@@ -2032,7 +2058,7 @@ RunService:BindToRenderStep("PhantomOverlay", Enum.RenderPriority.Last.Value + 2
     end
 
     if Toggles.Triggerbot.Value and Options.TriggerbotKey:GetState() then
-        local part = Mouse.Target
+        local part = GetCenterTarget()
         if isTriggerEnemyTarget(part) then
             if currentTriggerTarget == part then
                 triggerFocusTime = triggerFocusTime + deltaTime
@@ -2273,7 +2299,7 @@ end)
 Library:OnUnload(function()
     RunService:UnbindFromRenderStep("PhantomOverlay")
     RunService:UnbindFromRenderStep("AutoHideRestore")
-    if TitleAnimConn then TitleAnimConn:Disconnect() end -- アニメーションを確実に停止
+    if TitleAnimConn then TitleAnimConn:Disconnect() end
     if RageFOVGui then RageFOVGui:Destroy() end
     FOVRegion:Remove()
     ST_TracerOutline:Remove(); ST_Tracer:Remove()
