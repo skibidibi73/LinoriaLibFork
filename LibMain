@@ -143,9 +143,6 @@ function Library:ApplyTextStroke(Inst)
     });
 end;
 
--- ==========================================
--- 💡 カスタム：ぼんやり光るGlowエフェクト（極限スリム・超グラデーション版）
--- ==========================================
 function Library:ApplyGlow(Inst)
     local GlowContainer = Library:Create('Frame', {
         Name = 'GlowContainer',
@@ -925,7 +922,6 @@ do
             ColorPicker:Display();
         end;
 
-        -- Mobile-friendly drag for SatVibMap
         SatVibMap.InputBegan:Connect(function(Input)
             if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                 local function UpdateColor(PosX, PosY)
@@ -961,7 +957,6 @@ do
             end
         end);
 
-        -- Mobile-friendly drag for HueSelector
         HueSelectorInner.InputBegan:Connect(function(Input)
             if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                 local function UpdateHue(PosY)
@@ -1078,7 +1073,7 @@ do
         local KeyPicker = {
             Value = Info.Default;
             Toggled = false;
-            Mode = Info.Mode or 'Toggle'; -- Always, Toggle, Hold
+            Mode = Info.Mode or 'Toggle';
             Type = 'KeyPicker';
             Callback = Info.Callback or function(Value) end;
             ChangedCallback = Info.ChangedCallback or function(New) end;
@@ -1255,7 +1250,7 @@ do
                 if Key == 'MB1' or Key == 'MB2' or Key == 'Touch' then
                     return Key == 'MB1' and InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
                         or Key == 'MB2' and InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
-                        or Key == 'Touch' and true -- Simple touch hold mapping
+                        or Key == 'Touch' and true
                 else
                     return InputService:IsKeyDown(Enum.KeyCode[KeyPicker.Value]);
                 end;
@@ -1621,7 +1616,6 @@ do
             end
             return self
         end
-
 
         function Button:AddButton(...)
             local SubButton = {}
@@ -2174,7 +2168,6 @@ do
             Library:SafeCallback(Slider.Changed, Slider.Value);
         end;
 
-        -- Mobile-friendly drag for Sliders
         SliderInner.InputBegan:Connect(function(Input)
             if (Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch) and not Library:MouseIsOverOpenedFrame() then
                 
@@ -2841,7 +2834,6 @@ do
         Parent = ScreenGui;
     });
 
-    -- 🌟 キーバインドリストを光らせる
     Library:ApplyGlow(KeybindOuter);
 
     local KeybindInner = Library:Create('Frame', {
@@ -3022,8 +3014,16 @@ function Library:CreateWindow(...)
     if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 0 end
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
 
-    if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
     if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
+    if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
+
+    -- 🌟 スマホ向け：画面サイズに合わせてUIのサイズを自動縮小
+    if InputService.TouchEnabled then
+        local vp = workspace.CurrentCamera.ViewportSize
+        local maxWidth = math.min(Config.Size.X.Offset, vp.X - 20)
+        local maxHeight = math.min(Config.Size.Y.Offset, vp.Y - 60)
+        Config.Size = UDim2.fromOffset(maxWidth, maxHeight)
+    end
 
     if Config.Center then
         Config.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -3045,9 +3045,7 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
-    -- 🌟 メインUIを光らせる
     Library:ApplyGlow(Outer);
-
     Library:MakeDraggable(Outer, 25);
 
     local Inner = Library:Create('Frame', {
@@ -3075,7 +3073,6 @@ function Library:CreateWindow(...)
         Parent = Inner;
     });
 
-    -- 🌟 右上に赤字で現在いるマップ名を表示
     local MapNameLabel = Library:CreateLabel({
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, -7, 0, 0),
@@ -3153,7 +3150,6 @@ function Library:CreateWindow(...)
         Parent = MainSectionInner;
     });
     
-
     Library:AddToRegistry(TabContainer, {
         BackgroundColor3 = 'MainColor';
         BorderColor3 = 'OutlineColor';
@@ -3192,18 +3188,15 @@ function Library:CreateWindow(...)
             Parent = TabButton;
         });
 
-        -- 🌟 選択中タブのインジケーター（上の光る線）を追加
         local TabIndicator = Library:Create('Frame', {
             BackgroundColor3 = Library.AccentColor;
             BorderSizePixel = 0;
-            Position = UDim2.new(0, 0, 0, 0); -- タブの一番上
-            Size = UDim2.new(1, 0, 0, 2); -- 幅100%, 高さ2pxの細い線
-            Visible = false; -- 初期は非表示
+            Position = UDim2.new(0, 0, 0, 0);
+            Size = UDim2.new(1, 0, 0, 2); 
+            Visible = false; 
             ZIndex = 4;
             Parent = TabButton;
         });
-        
-        -- テーマカラーに連動させる
         Library:AddToRegistry(TabIndicator, { BackgroundColor3 = 'AccentColor' });
 
         local Blocker = Library:Create('Frame', {
@@ -3230,11 +3223,12 @@ function Library:CreateWindow(...)
             Parent = TabContainer;
         });
 
+        -- 🌟 スマホ向け：高さを Scale(1) ベースに変更し、親フレームが小さくても見切れないように
         local LeftSide = Library:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -3247,7 +3241,7 @@ function Library:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -3287,8 +3281,6 @@ function Library:CreateWindow(...)
             TabButton.BackgroundColor3 = Library.MainColor;
             Library.RegistryMap[TabButton].Properties.BackgroundColor3 = 'MainColor';
             TabFrame.Visible = true;
-            
-            -- 🌟 タブが開かれたらインジケーターを表示
             TabIndicator.Visible = true;
         end;
 
@@ -3297,8 +3289,6 @@ function Library:CreateWindow(...)
             TabButton.BackgroundColor3 = Library.BackgroundColor;
             Library.RegistryMap[TabButton].Properties.BackgroundColor3 = 'BackgroundColor';
             TabFrame.Visible = false;
-            
-            -- 🌟 タブが隠れたらインジケーターも隠す
             TabIndicator.Visible = false;
         end;
 
@@ -3752,7 +3742,7 @@ Players.PlayerAdded:Connect(OnPlayerChange);
 Players.PlayerRemoving:Connect(OnPlayerChange);
 
 -- ==========================================
--- 📱 スマホ専用：モバイルUIトグルボタンの追加
+-- 📱 スマホ専用：モバイルUIの個別配置＆同期
 -- ==========================================
 if InputService.TouchEnabled then
     local MobileGui = Instance.new("ScreenGui")
@@ -3761,52 +3751,44 @@ if InputService.TouchEnabled then
     ProtectGui(MobileGui)
     MobileGui.Parent = CoreGui
 
-    local MobileFrame = Library:Create('Frame', {
-        BackgroundColor3 = Library.MainColor,
-        BorderColor3 = Library.OutlineColor,
-        BorderMode = Enum.BorderMode.Inset,
-        Position = UDim2.new(0, 10, 0, 10),
-        Size = UDim2.new(0, 110, 0, 50),
-        ZIndex = 300,
-        Parent = MobileGui,
-        Active = true,
-    })
-    Library:AddToRegistry(MobileFrame, {
-        BackgroundColor3 = 'MainColor',
-        BorderColor3 = 'OutlineColor'
-    })
+    -- UIパーツ生成用関数
+    local function CreateMobileButton(name, text, startPos)
+        local Frame = Library:Create('Frame', {
+            Name = name .. "Frame",
+            BackgroundColor3 = Library.MainColor,
+            BorderColor3 = Library.AccentColor, -- 🌟 アクセントカラーに同期
+            BorderMode = Enum.BorderMode.Inset,
+            Position = startPos,
+            Size = UDim2.new(0, 100, 0, 35),
+            ZIndex = 300,
+            Parent = MobileGui,
+            Active = true,
+        })
+        Library:AddToRegistry(Frame, {
+            BackgroundColor3 = 'MainColor',
+            BorderColor3 = 'AccentColor' -- 🌟 登録することでテーマ変更時も追従する
+        })
 
-    local Layout = Library:Create('UIListLayout', {
-        FillDirection = Enum.FillDirection.Vertical,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = MobileFrame
-    })
+        local Btn = Library:Create('TextButton', {
+            Name = name .. "Btn",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Font = Library.Font,
+            Text = text,
+            TextColor3 = Library.FontColor,
+            TextSize = 14,
+            ZIndex = 301,
+            Parent = Frame
+        })
+        Library:AddToRegistry(Btn, { TextColor3 = 'FontColor' })
 
-    local ToggleBtn = Library:Create('TextButton', {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 25),
-        Font = Library.Font,
-        Text = "Toggle UI",
-        TextColor3 = Library.FontColor,
-        TextSize = 14,
-        ZIndex = 301,
-        Parent = MobileFrame
-    })
-    Library:AddToRegistry(ToggleBtn, { TextColor3 = 'FontColor' })
+        return Frame, Btn
+    end
 
-    local LockBtn = Library:Create('TextButton', {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 25),
-        Font = Library.Font,
-        Text = "Unlock UI",
-        TextColor3 = Library.FontColor,
-        TextSize = 14,
-        ZIndex = 301,
-        Parent = MobileFrame
-    })
-    Library:AddToRegistry(LockBtn, { TextColor3 = 'FontColor' })
+    -- 🌟 ToggleとLockをそれぞれ別のフレームとして生成
+    local ToggleFrame, ToggleBtn = CreateMobileButton("Toggle", "Toggle UI", UDim2.new(0, 10, 0, 10))
+    local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 120, 0, 10))
 
-    -- ボタンのアクション
     ToggleBtn.Activated:Connect(function()
         Library:Toggle()
     end)
@@ -3816,39 +3798,46 @@ if InputService.TouchEnabled then
         IsUnlocked = not IsUnlocked
         LockBtn.Text = IsUnlocked and "Lock UI" or "Unlock UI"
         
+        -- 🌟 Unlock状態の時はテキストをアクセントカラーで光らせる
         if IsUnlocked then
             LockBtn.TextColor3 = Library.AccentColor
-            Library:AddToRegistry(LockBtn, { TextColor3 = 'AccentColor' })
+            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'AccentColor'
         else
             LockBtn.TextColor3 = Library.FontColor
-            Library:AddToRegistry(LockBtn, { TextColor3 = 'FontColor' })
+            Library.RegistryMap[LockBtn].Properties.TextColor3 = 'FontColor'
         end
     end)
 
-    -- Unlock時のボタン自体のドラッグ操作
-    local Dragging = false
-    local DragStart, StartPos
+    -- 各フレームをドラッグ可能にする関数（Unlock状態のみ）
+    local function MakeMobileDraggable(Frame)
+        local Dragging = false
+        local DragStart, StartPos
 
-    MobileFrame.InputBegan:Connect(function(input)
-        if IsUnlocked and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-            Dragging = true
-            DragStart = input.Position
-            StartPos = MobileFrame.Position
-        end
-    end)
+        Frame.InputBegan:Connect(function(input)
+            if IsUnlocked and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                Dragging = true
+                DragStart = input.Position
+                StartPos = Frame.Position
+            end
+        end)
 
-    InputService.InputChanged:Connect(function(input)
-        if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local Delta = input.Position - DragStart
-            MobileFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-        end
-    end)
+        InputService.InputChanged:Connect(function(input)
+            if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local Delta = input.Position - DragStart
+                Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+            end
+        end)
 
-    InputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            Dragging = false
-        end
-    end)
+        InputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                Dragging = false
+            end
+        end)
+    end
+
+    -- 🌟 それぞれにドラッグ機能を付与
+    MakeMobileDraggable(ToggleFrame)
+    MakeMobileDraggable(LockFrame)
 end
 
 getgenv().Library = Library
