@@ -5,6 +5,7 @@ local Teams = game:GetService('Teams');
 local Players = game:GetService('Players');
 local RunService = game:GetService('RunService')
 local TweenService = game:GetService('TweenService');
+local Lighting = game:GetService('Lighting');
 local RenderStepped = RunService.RenderStepped;
 local LocalPlayer = Players.LocalPlayer;
 local Mouse = LocalPlayer:GetMouse();
@@ -44,7 +45,37 @@ local Library = {
 
     Signals = {};
     ScreenGui = ScreenGui;
+
+    -- 🌟 NEW: 新機能用の変数
+    Toggled = false;
+    WireframeDrag = false;
+    UseBlur = false;
+    BlurSize = 15;
 };
+
+-- 🌟 NEW: BlurEffectの初期化
+Library.BlurEffect = Instance.new("BlurEffect")
+Library.BlurEffect.Name = "LinoriaBlur"
+Library.BlurEffect.Size = 0
+Library.BlurEffect.Enabled = false
+pcall(function() Library.BlurEffect.Parent = Lighting end)
+
+function Library:UpdateBlur()
+    if Library.UseBlur then
+        if Library.Toggled then
+            Library.BlurEffect.Enabled = true
+            TweenService:Create(Library.BlurEffect, TweenInfo.new(0.2, Enum.EasingStyle.Linear), {Size = Library.BlurSize}):Play()
+        end
+    else
+        local tween = TweenService:Create(Library.BlurEffect, TweenInfo.new(0.2, Enum.EasingStyle.Linear), {Size = 0})
+        tween:Play()
+        task.delay(0.2, function()
+            if not Library.UseBlur then
+                Library.BlurEffect.Enabled = false
+            end
+        end)
+    end
+end
 
 local RainbowStep = 0
 local Hue = 0
@@ -200,7 +231,8 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
-function Library:MakeDraggable(Instance, Cutoff)
+-- 🌟 NEW: Wireframe Dragging に対応した MakeDraggable
+function Library:MakeDraggable(Instance, Cutoff, IsWindow)
     Instance.Active = true;
     Instance.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
@@ -212,15 +244,50 @@ function Library:MakeDraggable(Instance, Cutoff)
             end
 
             local Dragging = true
+            local HasMoved = false
+            local Wireframe = nil
+            local GlowContainer = Instance:FindFirstChild("GlowContainer")
+            local Inner = Instance:FindFirstChild("Inner")
             local ChangedConn, EndedConn
 
             ChangedConn = InputService.InputChanged:Connect(function(Change)
                 if Change.UserInputType == Enum.UserInputType.MouseMovement or Change == Input then
                     local Delta = Change.Position - DragStart
-                    Instance.Position = UDim2.new(
-                        StartPos.X.Scale, StartPos.X.Offset + Delta.X,
-                        StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
-                    )
+                    
+                    if IsWindow and Library.WireframeDrag then
+                        if not HasMoved and Delta.Magnitude > 2 then
+                            HasMoved = true
+                            
+                            Wireframe = Instance.new("Frame")
+                            Wireframe.Size = Instance.Size
+                            Wireframe.Position = Instance.Position
+                            Wireframe.BackgroundTransparency = 1
+                            Wireframe.ZIndex = 100000
+                            
+                            local stroke = Instance.new("UIStroke")
+                            stroke.Color = Library.AccentColor
+                            stroke.Thickness = 2
+                            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            stroke.Parent = Wireframe
+                            
+                            Wireframe.Parent = ScreenGui
+                            
+                            if Inner then Inner.Visible = false end
+                            if GlowContainer then GlowContainer.Visible = false end
+                        end
+                        
+                        if HasMoved and Wireframe then
+                            Wireframe.Position = UDim2.new(
+                                StartPos.X.Scale, StartPos.X.Offset + Delta.X,
+                                StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
+                            )
+                        end
+                    else
+                        Instance.Position = UDim2.new(
+                            StartPos.X.Scale, StartPos.X.Offset + Delta.X,
+                            StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
+                        )
+                    end
                 end
             end)
 
@@ -229,6 +296,14 @@ function Library:MakeDraggable(Instance, Cutoff)
                     Dragging = false
                     ChangedConn:Disconnect()
                     EndedConn:Disconnect()
+                    
+                    if IsWindow and Library.WireframeDrag and HasMoved and Wireframe then
+                        Instance.Position = Wireframe.Position
+                        Wireframe:Destroy()
+                        
+                        if Inner then Inner.Visible = true end
+                        if GlowContainer then GlowContainer.Visible = true end
+                    end
                 end
             end)
         end
@@ -422,6 +497,10 @@ function Library:Unload()
 
     if Library.OnUnload then
         Library.OnUnload()
+    end
+    
+    if Library.BlurEffect then
+        Library.BlurEffect:Destroy()
     end
 
     ScreenGui:Destroy()
@@ -3116,9 +3195,12 @@ function Library:CreateWindow(...)
     });
 
     Library:ApplyGlow(Outer);
-    Library:MakeDraggable(Outer, 25);
+    
+    -- 🌟 NEW: メインウィンドウにWireframeDragフラグを渡す
+    Library:MakeDraggable(Outer, 25, true);
 
     local Inner = Library:Create('Frame', {
+        Name = "Inner", -- 🌟 NEW: ドラッグ時に非表示にするため名前を付ける
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.AccentColor;
         BorderMode = Enum.BorderMode.Inset;
@@ -3525,7 +3607,6 @@ function Library:CreateWindow(...)
                     BackgroundColor3 = 'MainColor';
                 });
 
-                -- 🌟 NEW: 各タブ専用のアクセントカラーハイライト
                 local TabHighlight = Library:Create('Frame', {
                     BackgroundColor3 = Library.AccentColor;
                     BorderSizePixel = 0;
@@ -3584,7 +3665,7 @@ function Library:CreateWindow(...)
 
                     Container.Visible = true;
                     Block.Visible = true;
-                    TabHighlight.Visible = true; -- 🌟 選択したタブだけ線を表示
+                    TabHighlight.Visible = true;
 
                     Button.BackgroundColor3 = Library.BackgroundColor;
                     Library.RegistryMap[Button].Properties.BackgroundColor3 = 'BackgroundColor';
@@ -3595,7 +3676,7 @@ function Library:CreateWindow(...)
                 function Tab:Hide()
                     Container.Visible = false;
                     Block.Visible = false;
-                    TabHighlight.Visible = false; -- 🌟 隠れるときは線を消す
+                    TabHighlight.Visible = false;
 
                     Button.BackgroundColor3 = Library.MainColor;
                     Library.RegistryMap[Button].Properties.BackgroundColor3 = 'MainColor';
@@ -3688,7 +3769,6 @@ function Library:CreateWindow(...)
     });
 
     local TransparencyCache = {};
-    local Toggled = false;
     local Fading = false;
 
     function Library:Toggle()
@@ -3698,10 +3778,10 @@ function Library:CreateWindow(...)
 
         local FadeTime = Config.MenuFadeTime;
         Fading = true;
-        Toggled = (not Toggled);
-        ModalElement.Modal = Toggled;
+        Library.Toggled = not Library.Toggled;
+        ModalElement.Modal = Library.Toggled;
 
-        if Toggled then
+        if Library.Toggled then
             Outer.Visible = true;
 
             task.spawn(function()
@@ -3718,7 +3798,7 @@ function Library:CreateWindow(...)
                 CursorOutline.Color = Color3.new(0, 0, 0);
                 CursorOutline.Visible = true;
 
-                while Toggled and ScreenGui.Parent do
+                while Library.Toggled and ScreenGui.Parent do
                     InputService.MouseIconEnabled = false;
 
                     local mPos = InputService:GetMouseLocation();
@@ -3773,14 +3853,32 @@ function Library:CreateWindow(...)
                     continue;
                 end;
 
-                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = Toggled and Cache[Prop] or 1 }):Play();
+                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = Library.Toggled and Cache[Prop] or 1 }):Play();
             end;
         end;
+        
+        -- 🌟 NEW: UI開閉時の背景Blur連動アニメーション
+        if Library.UseBlur then
+            if Library.Toggled then
+                Library.BlurEffect.Enabled = true
+                TweenService:Create(Library.BlurEffect, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), {Size = Library.BlurSize}):Play()
+            else
+                local tween = TweenService:Create(Library.BlurEffect, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), {Size = 0})
+                tween:Play()
+                task.delay(FadeTime, function()
+                    if not Library.Toggled then
+                        Library.BlurEffect.Enabled = false
+                    end
+                end)
+            end
+        else
+            Library.BlurEffect.Size = 0
+            Library.BlurEffect.Enabled = false
+        end
 
         task.wait(FadeTime);
 
-        Outer.Visible = Toggled;
-
+        Outer.Visible = Library.Toggled;
         Fading = false;
     end
 
