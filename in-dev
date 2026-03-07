@@ -1417,9 +1417,6 @@ do
         });
     end;
 
-    -- ==========================================
-    -- 🌟 NEW: AddRow 機能 (横並びコンテナの作成)
-    -- ==========================================
     function Funcs:AddRow(Columns)
         local Groupbox = self
         local Container = Groupbox.Container
@@ -1490,7 +1487,6 @@ do
 
         return unpack(Boxes)
     end;
-    -- ==========================================
 
     function Funcs:AddLabel(Text, DoesWrap)
         local Label = {};
@@ -3499,18 +3495,6 @@ function Library:CreateWindow(...)
                 BackgroundColor3 = 'BackgroundColor';
             });
 
-            local Highlight = Library:Create('Frame', {
-                BackgroundColor3 = Library.AccentColor;
-                BorderSizePixel = 0;
-                Size = UDim2.new(1, 0, 0, 2);
-                ZIndex = 10;
-                Parent = BoxInner;
-            });
-
-            Library:AddToRegistry(Highlight, {
-                BackgroundColor3 = 'AccentColor';
-            });
-
             local TabboxButtons = Library:Create('Frame', {
                 BackgroundTransparency = 1;
                 Position = UDim2.new(0, 0, 0, 1);
@@ -3539,6 +3523,20 @@ function Library:CreateWindow(...)
 
                 Library:AddToRegistry(Button, {
                     BackgroundColor3 = 'MainColor';
+                });
+
+                -- 🌟 NEW: 各タブ専用のアクセントカラーハイライト
+                local TabHighlight = Library:Create('Frame', {
+                    BackgroundColor3 = Library.AccentColor;
+                    BorderSizePixel = 0;
+                    Size = UDim2.new(1, 0, 0, 2);
+                    Visible = false;
+                    ZIndex = 10;
+                    Parent = Button;
+                });
+
+                Library:AddToRegistry(TabHighlight, {
+                    BackgroundColor3 = 'AccentColor';
                 });
 
                 local ButtonLabel = Library:CreateLabel({
@@ -3586,6 +3584,7 @@ function Library:CreateWindow(...)
 
                     Container.Visible = true;
                     Block.Visible = true;
+                    TabHighlight.Visible = true; -- 🌟 選択したタブだけ線を表示
 
                     Button.BackgroundColor3 = Library.BackgroundColor;
                     Library.RegistryMap[Button].Properties.BackgroundColor3 = 'BackgroundColor';
@@ -3596,6 +3595,7 @@ function Library:CreateWindow(...)
                 function Tab:Hide()
                     Container.Visible = false;
                     Block.Visible = false;
+                    TabHighlight.Visible = false; -- 🌟 隠れるときは線を消す
 
                     Button.BackgroundColor3 = Library.MainColor;
                     Library.RegistryMap[Button].Properties.BackgroundColor3 = 'MainColor';
@@ -3851,20 +3851,18 @@ if InputService.TouchEnabled then
             TextSize = 14,
             ZIndex = 301,
             Parent = Frame,
-            Active = true, -- ここ重要: ボタン自身にタッチを検知させる
+            Active = true,
         })
         Library:AddToRegistry(Btn, { TextColor3 = 'FontColor' })
 
         return Frame, Btn
     end
 
-    -- 🌟 Toggleは上、Lockはそのすぐ下（Y座標を+45）に配置
     local ToggleFrame, ToggleBtn = CreateMobileButton("Toggle", "Toggle UI", UDim2.new(0, 10, 0, 10))
     local LockFrame, LockBtn = CreateMobileButton("Lock", "Unlock UI", UDim2.new(0, 10, 0, 55))
 
     local IsUnlocked = false
 
-    -- 🌟 究極のドラッグ＆タップ判定関数
     local function BindMobileButtonAction(Btn, Frame, ClickAction)
         local dragging = false
         local dragInput = nil
@@ -3878,16 +3876,14 @@ if InputService.TouchEnabled then
                 hasMoved = false
                 dragStart = input.Position
                 startPos = Frame.Position
-                dragInput = input -- この指の動きを追跡する
+                dragInput = input
 
-                -- 指を離した時
                 local connection
                 connection = input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then
                         dragging = false
                         connection:Disconnect()
                         
-                        -- 動かしてなければ「クリック」と判定
                         if not hasMoved then
                             ClickAction()
                         end
@@ -3896,17 +3892,14 @@ if InputService.TouchEnabled then
             end
         end)
 
-        -- 指が動いた時の処理
         InputService.InputChanged:Connect(function(input)
             if input == dragInput and dragging then
                 local delta = input.Position - dragStart
                 
-                -- ちょっとでも（3ピクセル以上）動いたら「ドラッグ」とみなす
                 if delta.Magnitude > 3 then
                     hasMoved = true
                 end
                 
-                -- アンロック状態の時だけフレームを移動させる
                 if IsUnlocked and hasMoved then
                     Frame.Position = UDim2.new(
                         startPos.X.Scale, startPos.X.Offset + delta.X,
@@ -3917,17 +3910,14 @@ if InputService.TouchEnabled then
         end)
     end
 
-    -- Toggleボタンの動作
     BindMobileButtonAction(ToggleBtn, ToggleFrame, function()
         Library:Toggle()
     end)
 
-    -- Lockボタンの動作
     BindMobileButtonAction(LockBtn, LockFrame, function()
         IsUnlocked = not IsUnlocked
         LockBtn.Text = IsUnlocked and "Lock UI" or "Unlock UI"
         
-        -- Unlock中は青く光らせる（動かせるよ！のアピール）
         if IsUnlocked then
             LockBtn.TextColor3 = Library.AccentColor
             Library.RegistryMap[LockBtn].Properties.TextColor3 = 'AccentColor'
