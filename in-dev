@@ -256,22 +256,23 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                         if not HasMoved and Delta.Magnitude > 2 then
                             HasMoved = true
                             
-                            Wireframe = Instance.new("Frame")
-                            Wireframe.Size = Instance.Size
-                            Wireframe.Position = Instance.Position
-                            Wireframe.BackgroundTransparency = 1
-                            Wireframe.Active = false -- マウスイベントを邪魔しないようにする
-                            Wireframe.ZIndex = 100000
+                            -- 🌟 修正ポイント: 変数名被り（Instance）を回避して作成
+                            Wireframe = Library:Create("Frame", {
+                                Size = Instance.Size,
+                                Position = Instance.Position,
+                                BackgroundTransparency = 1,
+                                Active = false,
+                                ZIndex = 100000,
+                                Parent = ScreenGui
+                            })
                             
-                            local stroke = Instance.new("UIStroke")
-                            stroke.Color = Library.AccentColor
-                            stroke.Thickness = 2
-                            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                            stroke.Parent = Wireframe
+                            local stroke = Library:Create("UIStroke", {
+                                Color = Library.AccentColor,
+                                Thickness = 2,
+                                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                                Parent = Wireframe
+                            })
                             
-                            Wireframe.Parent = ScreenGui
-                            
-                            -- 🌟 ドラッグ中はUI本体の背景、中身、光を全て隠す
                             Instance.BackgroundTransparency = 1
                             if Inner then Inner.Visible = false end
                             if GlowContainer then GlowContainer.Visible = false end
@@ -299,7 +300,6 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                     EndedConn:Disconnect()
                     
                     if IsWindow and Library.WireframeDrag and HasMoved and Wireframe then
-                        -- 🌟 ドロップしたら新しい位置にワープさせて本体を再表示
                         Instance.Position = Wireframe.Position
                         Instance.BackgroundTransparency = 0
                         if Inner then Inner.Visible = true end
