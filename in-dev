@@ -229,7 +229,7 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
--- 🌟 修正版: Wireframe Dragging
+-- 🌟 修正版: Wireframe Dragging (AnchorPoint修正)
 function Library:MakeDraggable(Instance, Cutoff, IsWindow)
     Instance.Active = true;
     Instance.InputBegan:Connect(function(Input)
@@ -256,10 +256,11 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                         if not HasMoved and Delta.Magnitude > 2 then
                             HasMoved = true
                             
-                            -- 🌟 修正ポイント: 変数名被り（Instance）を回避して作成
+                            -- 🌟 修正ポイント: AnchorPoint を引き継ぐことでズレを解消！
                             Wireframe = Library:Create("Frame", {
                                 Size = Instance.Size,
                                 Position = Instance.Position,
+                                AnchorPoint = Instance.AnchorPoint,
                                 BackgroundTransparency = 1,
                                 Active = false,
                                 ZIndex = 100000,
