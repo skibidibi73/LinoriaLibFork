@@ -46,14 +46,12 @@ local Library = {
     Signals = {};
     ScreenGui = ScreenGui;
 
-    -- 🌟 NEW: 新機能用の変数
     Toggled = false;
     WireframeDrag = false;
     UseBlur = false;
     BlurSize = 15;
 };
 
--- 🌟 NEW: BlurEffectの初期化
 Library.BlurEffect = Instance.new("BlurEffect")
 Library.BlurEffect.Name = "LinoriaBlur"
 Library.BlurEffect.Size = 0
@@ -231,7 +229,7 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
--- 🌟 NEW: Wireframe Dragging に対応した MakeDraggable
+-- 🌟 修正版: Wireframe Dragging
 function Library:MakeDraggable(Instance, Cutoff, IsWindow)
     Instance.Active = true;
     Instance.InputBegan:Connect(function(Input)
@@ -262,6 +260,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                             Wireframe.Size = Instance.Size
                             Wireframe.Position = Instance.Position
                             Wireframe.BackgroundTransparency = 1
+                            Wireframe.Active = false -- マウスイベントを邪魔しないようにする
                             Wireframe.ZIndex = 100000
                             
                             local stroke = Instance.new("UIStroke")
@@ -272,6 +271,8 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                             
                             Wireframe.Parent = ScreenGui
                             
+                            -- 🌟 ドラッグ中はUI本体の背景、中身、光を全て隠す
+                            Instance.BackgroundTransparency = 1
                             if Inner then Inner.Visible = false end
                             if GlowContainer then GlowContainer.Visible = false end
                         end
@@ -298,11 +299,14 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                     EndedConn:Disconnect()
                     
                     if IsWindow and Library.WireframeDrag and HasMoved and Wireframe then
+                        -- 🌟 ドロップしたら新しい位置にワープさせて本体を再表示
                         Instance.Position = Wireframe.Position
-                        Wireframe:Destroy()
-                        
+                        Instance.BackgroundTransparency = 0
                         if Inner then Inner.Visible = true end
                         if GlowContainer then GlowContainer.Visible = true end
+                        
+                        Wireframe:Destroy()
+                        Wireframe = nil
                     end
                 end
             end)
@@ -3200,7 +3204,7 @@ function Library:CreateWindow(...)
     Library:MakeDraggable(Outer, 25, true);
 
     local Inner = Library:Create('Frame', {
-        Name = "Inner", -- 🌟 NEW: ドラッグ時に非表示にするため名前を付ける
+        Name = "Inner",
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.AccentColor;
         BorderMode = Enum.BorderMode.Inset;
