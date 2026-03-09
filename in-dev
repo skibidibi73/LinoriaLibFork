@@ -2902,11 +2902,9 @@ do
 end;
 
 do
-    -- 🌟 修正箇所1：通知エリアの位置と広がり方
     Library.NotificationArea = Library:Create('Frame', {
         BackgroundTransparency = 1;
-        AnchorPoint = Vector2.new(0.5, 0);
-        Position = UDim2.new(0.5, 0, 0.65, 0); -- 真ん中より少し下（65%の位置）
+        Position = UDim2.new(0, 0, 0, 40);
         Size = UDim2.new(0, 300, 0, 200);
         ZIndex = 100;
         Parent = ScreenGui;
@@ -2916,7 +2914,6 @@ do
         Padding = UDim.new(0, 4);
         FillDirection = Enum.FillDirection.Vertical;
         SortOrder = Enum.SortOrder.LayoutOrder;
-        HorizontalAlignment = Enum.HorizontalAlignment.Center; -- 中央から広がるアニメーション用
         Parent = Library.NotificationArea;
     });
 
@@ -3121,28 +3118,26 @@ function Library:Notify(Text, Time)
         end
     });
 
-    -- 🌟 修正箇所2：テキストの中央揃え
     local NotifyLabel = Library:CreateLabel({
         Position = UDim2.new(0, 4, 0, 0);
-        Size = UDim2.new(1, -8, 1, 0); 
+        Size = UDim2.new(1, -4, 1, 0);
         Text = Text;
-        TextXAlignment = Enum.TextXAlignment.Center;
+        TextXAlignment = Enum.TextXAlignment.Left;
         TextSize = 14;
         ZIndex = 103;
         Parent = InnerFrame;
     });
 
-    -- 🌟 修正箇所3：左のアクセントラインを上部に変更
-    local TopColor = Library:Create('Frame', {
+    local LeftColor = Library:Create('Frame', {
         BackgroundColor3 = Library.AccentColor;
         BorderSizePixel = 0;
-        Position = UDim2.new(0, 0, 0, 0);
-        Size = UDim2.new(1, 0, 0, 2);
+        Position = UDim2.new(0, -1, 0, -1);
+        Size = UDim2.new(0, 3, 1, 2);
         ZIndex = 104;
         Parent = NotifyOuter;
     });
 
-    Library:AddToRegistry(TopColor, {
+    Library:AddToRegistry(LeftColor, {
         BackgroundColor3 = 'AccentColor';
     }, true);
 
