@@ -229,7 +229,7 @@ function Library:CreateLabel(Properties, IsHud)
     return Library:Create(_Instance, Properties);
 end;
 
--- 🌟 修正版: Wireframe Dragging (元のUIを残したままドラッグし、離すとTPする)
+-- 🌟 修正版: Wireframe Dragging (元のUIを残したままドラッグし、離すとTPする + 枠線を細く)
 function Library:MakeDraggable(Instance, Cutoff, IsWindow)
     Instance.Active = true;
     Instance.InputBegan:Connect(function(Input)
@@ -254,7 +254,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                         if not HasMoved and Delta.Magnitude > 2 then
                             HasMoved = true
                             
-                            -- ワイヤーフレームを生成（元のUIを非表示にする処理は削除しました）
+                            -- ワイヤーフレームを生成
                             Wireframe = Library:Create("Frame", {
                                 Size = Instance.Size,
                                 Position = Instance.Position,
@@ -267,7 +267,7 @@ function Library:MakeDraggable(Instance, Cutoff, IsWindow)
                             
                             local stroke = Library:Create("UIStroke", {
                                 Color = Library.AccentColor,
-                                Thickness = 2,
+                                Thickness = 1, -- 🌟 ここを 2 から 1 に変更して線を細くしました
                                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
                                 Parent = Wireframe
                             })
