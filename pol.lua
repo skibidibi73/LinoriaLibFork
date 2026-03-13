@@ -4006,7 +4006,9 @@ if InputService.TouchEnabled then
     end
 
     BindMobileButtonAction(ToggleBtn, ToggleFrame, function()
-        Library:Toggle()
+        if type(Library.Toggle) == "function" then
+            Library:Toggle()
+        end
     end)
 
     BindMobileButtonAction(LockBtn, LockFrame, function()
